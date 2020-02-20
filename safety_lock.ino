@@ -12,7 +12,7 @@
 
 #define DEBUG
 
-const char* ssid = "xxx"; //your wifi ssid
+const char* ssid = "xxxxxx"; //your wifi ssid
 const char* password = "yyyyyyyy";  //your wifi password 
 const char* ssid_ap = "SafetyLock";
 const char* password_ap = "esp8266Testing";
@@ -105,11 +105,6 @@ void loop() {
   processPostData();
 }
 
-/*calculate key from seed, it must be same with android side*/
-int calculateKey(int seed){
-  return sqrt(seed);
-}
-
 /* Process post request from HTTP client */
 void processPostData(){
   int cb = UDPServer.parsePacket();
@@ -124,44 +119,19 @@ void processPostData(){
     Serial.print("from: ");
     Serial.println(addr);
 #endif
-    if (message == "requestLock" || message == "requestUnlock"){
-      seed = random(0, 1000);
-      key = calculateKey(seed);
-      String response = message + ":" + String(seed);
-#ifdef DEBUG
-      Serial.print("seed: ");
-      Serial.println(seed);
-      Serial.print("key calc: ");
-      Serial.println(key);
-#endif
+    String strResponse; 
+    if (message == "requestLock"){
+      strResponse = "Locked";
       UDPServer.beginPacket(addr, clientPort);
-      UDPServer.write(response.c_str());
+      UDPServer.write(strResponse.c_str());
       UDPServer.endPacket();
-#ifdef DEBUG
-      Serial.print("response: ");
-      Serial.println(response);
-#endif
-      message.replace("request","");
-      state = message +"ed";
-    }else if (message.indexOf("key")!=-1){
-      int keyFromClient = message.substring(4).toInt();
-#ifdef DEBUG
-      Serial.print("Receive key: ");
-      Serial.println(keyFromClient);
-#endif
-      if (key==keyFromClient){
-        Serial.println("Key Matched !!!");
-        UDPServer.beginPacket(addr, clientPort);
-        UDPServer.write(state.c_str());
-        UDPServer.endPacket();
-        if (state=="Locked"){
-          setLock(0);
-        }else if(state=="Unlocked"){
-          setLock(PMW_VAL);
-        }
-      }else{
-        Serial.println("Wrong key !!!");
-      }
+      setLock(0);
+    } else if( message == "requestUnlock"){
+      strResponse = "Unlocked";
+      UDPServer.beginPacket(addr, clientPort);
+      UDPServer.write(strResponse.c_str());
+      UDPServer.endPacket();
+      setLock(PMW_VAL);
     }
     memset(packetBuffer, 0, PACKAGE_SIZE);
   }
